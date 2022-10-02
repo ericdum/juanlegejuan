@@ -33,19 +33,21 @@ export class CardTemplate extends Component {
     public constraints:{int:CardTemplate} = {};
 
     public rect:math.Rect;
+    public scale:Vec3;
     public lastPos:Vec3;
 
     public init(data, callback) {
         this.id = data.id;
         this.type = data.type;
+        this.rect = data.rect;
+        this.scale = data.scale;
 
-        let uit:UITransform = this.getComponent(UITransform);
-        assert(uit);
-        this.rect = uit.getBoundingBoxToWorld();
         this.rect.x += this.rect.width/5
         this.rect.y += this.rect.height/5;
         this.rect.width -= this.rect.width/5;
         this.rect.height -= this.rect.height/5;
+        this.node.scale = this.scale;
+
 
         this.enable();
 
@@ -150,7 +152,7 @@ export class CardTemplate extends Component {
                 let c:CardTemplate = this.constraints[i];
                 c.addDepend(this)
             }
-        }, 0.4, new Vec3(1, 1, 1))
+        }, 0.4, this.scale)
     }
 
     public extra() {

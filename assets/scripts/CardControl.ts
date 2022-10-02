@@ -1,8 +1,10 @@
-import { _decorator, Component, Node, find, SpriteFrame,
-    resources, tween, Vec3, math,
-    UITransform, Button, director,
-    AudioClip, AudioSource, Sprite,
-    rect} from 'cc';
+import {
+    _decorator, Component, Node, find, SpriteFrame,
+    resources, tween, Vec3, math, instantiate,
+    UITransform, Button, director, assetManager,
+    AudioClip, AudioSource, Sprite, Prefab,
+    Rect, ImageAsset, Texture2D
+} from 'cc';
 import {CardTemplate} from "db://assets/prefabs/Card";
 import {PopupControl} from "db://assets/scripts/PopupControl";
 import {clickAudio} from "db://assets/scripts/clickAudio";
@@ -21,6 +23,10 @@ const MAX_QUEUE = 8;
 export class CardControl extends Component {
     @property
     public level = 3;
+
+    @property({type:Prefab})
+    private cardPrefab: Prefab = null;
+
     protected Cards:[CardTemplate] = [];
     protected MergedCards:[CardTemplate] = [];
     protected MergingCards:[CardTemplate] = [];
@@ -35,64 +41,147 @@ export class CardControl extends Component {
     protected been_shuffle = false;
     protected been_revive = false;
 
+    protected images = {}
+    protected stageNum = 2;
+    protected currentStage = 1;
+    protected stages = {}
+
     protected onLoad() {
-        if (this.node.name == "Playground") currentActive = this;
-        // find('Canvas/Bottom/Layout/GameFeature').active = false;
+        console.log("PlayGround onLoad")
+        this.Container = find('Canvas/Bottom/Layout/Queue/container');
+        this.clean();
+
+        WXAPI.call({path:"/config"}).then((config)=>{
+            this.stageNum = config.stageNum;
+            this.stages = config.stages
+            this.loadGame(this.stages[0])
+        })
+    }
+
+    private clean() {
+        this.node.removeAllChildren();
         this.Cards.splice(0);
         this.MergedCards.splice(0);
         this.MergingCards.splice(0);
         this.WaitingCards.splice(0);
+    }
 
-        const total = this.node.children.length;
-        if (this.level > total) this.level = total;
-        const types = shuffle(TYPES).slice(0, this.level); // 选 4 个
+    protected loadGame(game:object) {
+        let {types, level, url, layers, width, height} = game;
+        let total = 0;
+        let images = {}
+
+        layers.forEach((layer)=>{
+            layer.data.forEach((row)=> {
+                row.split('').forEach((p)=>{
+                    if (p==1) total++;
+                })
+            })
+        })
+
+        // 如果总数不是 3 的倍数会导致永远无法通关，去掉最底层的方块
+        let skip = total % 3;
+        total -= skip;
+        console.log("total", total, "skip", skip)
+
+        if (level > total/3) level = total/3;
+        types = shuffle(types).slice(0, level)
+
         const CONFIG = [];
-``
-        // 平均分
         for (let i=0; i<total/3; i++) {
-            let type = types[i%this.level];
+            let type = types[i%level];
             CONFIG.push( {type: type} );
             CONFIG.push( {type: type} );
             CONFIG.push( {type: type} );
         }
-        shuffle(CONFIG);
-        for (let i=0; i<CONFIG.length; i++) {
-            let node: Node = find("/card-"+(CONFIG.length-i-1), this.node);
-            // console.log('find', node, i)
-            if (node) {
-                let card:CardTemplate = node.getComponent(CardTemplate);
-                card.init({
-                    id: i,
-                    type: CONFIG[i].type
-                }, this.move.bind(this))
-                this.detectDepends(card);
-                this.Cards.push(card);
-                resources.load('icons/' + CONFIG[i].type + '/spriteFrame', SpriteFrame, ((card) => {
-                    return (err, asset) => {
-                        card.setIcon(asset);
+        shuffle(CONFIG)
+
+        let size = [180, 200];
+        let ui = this.node.getComponent(UITransform);
+        let scaleRate = Math.min( ui.width/(width*size[0]), ui.height/(height*size[0]))
+        let scale = new Vec3(1,1,1)
+        if (scaleRate < 1) {
+            scale = new Vec3(scaleRate, scaleRate, 1)
+            size = [size[0]*scaleRate, size[1]*scaleRate];
+        }
+        let left = this.node.worldPosition.x - (width-1)*size[0] / 2;
+        let top = this.node.worldPosition.y + (height-1)*size[1] / 2;
+
+        for (let a=0; a<layers.length; a++) {
+            let layer = layers[a].data;
+            let offset = layers[a].offset;
+
+            let _left = left, _top = top, _height = height, _width = width;
+            _left = left + offset[0]*size[0];
+            _top = top - offset[1]*size[1];
+            _height = height;
+            _width = width;
+
+            for (let i = 0; i < _height; i++) {
+                if ( ! layer[i]) continue;
+                for (let j = 0; j < _width; j++) {
+                    if (skip) {
+                        skip--;
+                        continue;
                     }
-                })(card));
+                    if (layer[i][j] == '1') {
+                        let node = instantiate(this.cardPrefab);
+                        let id = this.Cards.length;
+                        let type = CONFIG[id].type;
+                        let pos = new Vec3(j * size[0] + _left,  _top - i * size[1]);
+                        let rect = new Rect(pos.x, pos.y, size[0], size[1]);
+
+                        this.loadImage(url, CONFIG[id].type).then((image: SpriteFrame) => {
+                            card.setIcon(image);
+                        })
+
+                        this.node.addChild(node);
+                        node.setWorldPosition(new Vec3( this.node.worldPosition.x, this.node.worldPosition.y*2+200, 1))
+                        let card: CardTemplate = node.getComponent(CardTemplate);
+                        card.init({ id, type, rect, scale }, this.move.bind(this))
+                        this.detectDepends(card);
+
+
+                        this.scheduleOnce(()=>{
+                            card.fly(pos)
+                        }, 0.3+Math.random()*0.7)
+
+                        this.Cards.push(card)
+                    }
+                }
             }
         }
-        this.Container = find('Canvas/Bottom/Layout/Queue/container');
-        console.log('Container', this.Container);
+    }
+
+    protected loadImage(url:string, type:string) {
+        if ( ! this.images[type]) {
+            this.images[type] = new Promise((resolve, reject)=>{
+                console.log("loading", type)
+                const spriteFrame = new SpriteFrame();
+                this.images[type] = spriteFrame;
+                assetManager.loadRemote(url.replace('{type}', type), (err, asset: ImageAsset) => {
+                    if (err) return reject(err);
+                    const texture = new Texture2D();
+                    texture.image = asset;
+                    spriteFrame.texture = texture
+                    resolve(spriteFrame);
+                })
+            });
+        }
+        return this.images[type];
     }
 
     finish(success=true) {
-        if (this.node.name == 'PlayGround' && success) {
-            this.node.active = false;
-            let node = find('Canvas/PlayGround-2');
-            currentActive = node.getComponent(CardControl);
-            tween<Node>().target(node)
-                .to(0.4, { worldPosition: this.node.worldPosition})
-                .start()
+        if (this.stageNum != this.currentStage && success) {
+            this.currentStage++;
+            this.clean();
+            this.loadGame(this.stages[this.currentStage-1])
             // find('Canvas/Bottom/Layout/GameFeature').active = true;
         } else {
             if (success) {
                 let ff = find('Success').getComponent(PopupControl);
                 ff.open();
             } else if ( ! this.been_revive) {
-                this.been_revive = true;
                 let ff = find('Revive').getComponent(PopupControl);
                 ff.open();
             } else {
@@ -106,8 +195,8 @@ export class CardControl extends Component {
         // console.log(card.rect)
         for (let i=0; i<this.Cards.length; i++) {
             if (this.Cards[i].rect.intersects(card.rect)) {
-                card.addDepend(this.Cards[i]);
-                this.Cards[i].addConstraint(card);
+                card.addConstraint(this.Cards[i]);
+                this.Cards[i].addDepend(card);
             }
         }
     }
@@ -147,7 +236,8 @@ export class CardControl extends Component {
     onExtraCards(callback=()=>{}) {
         if (this.node.active == false) return currentActive.onExtraCards();
 
-        let cards = this.extraCards(0, MAX_QUEUE);
+        // let cards = this.extraCards(0, MAX_QUEUE);
+        let cards = this.extraCards(0, Math.ceil(this.WaitingCards.length));
         for (let i = 0; i < cards.length; i++) {
             cards[i].extra();
         }
@@ -156,7 +246,6 @@ export class CardControl extends Component {
 
     onRevive() {
         if (this.node.active == false) return currentActive.onRevive();
-        ;
         this.onRandom(()=>{this.onExtraCards()});
     }
 
@@ -272,12 +361,13 @@ export class CardControl extends Component {
         }
         let place:Node
         if (found == -1) {
-            place = this.Container.getChildByName("Node-00"+this.WaitingCards.length);
+            let last = this.WaitingCards.length;
             this.WaitingCards.push(card);
+            place = this.Container.getChildByName("Node-00"+last);
             this.onPlace();
         } else { // 把不同类型的牌往后挪
-            place = this.Container.getChildByName("Node-00"+(found+1));
             this.WaitingCards.splice(found+1, 0, card);
+            place = this.Container.getChildByName("Node-00"+(found+1));
             this.refreshQueue(found+2);
         }
         return place;
@@ -328,6 +418,7 @@ export class CardControl extends Component {
     }
 
     getTool(ev, msg) {
+        console.log("getTool", ev, msg, this)
         if (msg == 'undo' && this.been_undo) return false;
         if (msg == 'extra' && this.been_extra) return false;
         if (msg == 'shuffle' && this.been_shuffle) return false;
@@ -367,6 +458,28 @@ export class CardControl extends Component {
         });
     }
 
+    encode(row:string):number {
+        return row
+            .split('')
+            .reverse()
+            .map((v)=>{return v*1})
+            .reduce((sum,bit,i ) => {
+                return sum + bit*Math.pow(2,i)
+            })
+    }
+
+    decode(code:number):string {
+        let result = '';
+        while (code) {
+            if (code % 2) {
+                result = '1' + result;
+                code--;
+            } else
+                result = '0' + result;
+            code /= 2
+        }
+        return result;
+    }
 }
 
 function shuffle(array) {
