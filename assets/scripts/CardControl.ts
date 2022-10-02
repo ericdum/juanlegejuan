@@ -1,19 +1,21 @@
 import { _decorator, Component, Node, find, SpriteFrame,
-    resources, tween, Vec3,
+    resources, tween, Vec3, math,
     UITransform, Button, director,
-    AudioClip, AudioSource,
+    AudioClip, AudioSource, Sprite,
     rect} from 'cc';
 import {CardTemplate} from "db://assets/prefabs/Card";
 import {PopupControl} from "db://assets/scripts/PopupControl";
 import {clickAudio} from "db://assets/scripts/clickAudio";
 const { ccclass, property } = _decorator;
+import WXAPI from "db://assets/scripts/WXAPI";
 
 const TYPES = [
-    'guo', 'shuaiguo', 'gouqi', 'gupiao', 'tutou', 'naicha', 'lvmaozi', 'waimai', 'jiu', 'maoyu', 'hei', 'bing', 'ppt',
-    'dingding', 'gongpai', 'jiayou',
+    'guo', 'jiuhuche', 'gouqi', 'gupiao', 'tutou', 'naicha', 'lvmaozi', 'waimai', 'jiu', 'maoyu', 'hei', 'bing', 'ppt',
+    'dingding', 'gongpai', 'zixingche',
 ];
 
 let currentActive:CardControl = null;
+const MAX_QUEUE = 8;
 
 @ccclass('CardControl')
 export class CardControl extends Component {
@@ -27,6 +29,11 @@ export class CardControl extends Component {
 
     private audio:AudioSource = new AudioSource();
     protected lastAct:CardTemplate;
+
+    protected been_undo = false;
+    protected been_extra = false;
+    protected been_shuffle = false;
+    protected been_revive = false;
 
     protected onLoad() {
         if (this.node.name == "Playground") currentActive = this;
@@ -82,7 +89,12 @@ export class CardControl extends Component {
             // find('Canvas/Bottom/Layout/GameFeature').active = true;
         } else {
             if (success) {
-                director.loadScene("home");
+                let ff = find('Success').getComponent(PopupControl);
+                ff.open();
+            } else if ( ! this.been_revive) {
+                this.been_revive = true;
+                let ff = find('Revive').getComponent(PopupControl);
+                ff.open();
             } else {
                 let ff = find('Fail Final').getComponent(PopupControl);
                 ff.open();
@@ -102,11 +114,12 @@ export class CardControl extends Component {
 
     move(card:CardTemplate, event) {
         if (card.queued) return false;
-        if (this.WaitingCards.length >= 7) return this.finish(false);
+        if (this.WaitingCards.length >= MAX_QUEUE) return false;
         card.queued = true;
 
         this.lastAct = card;
         let goal = this.makePlace(card);
+
         this.detectMerge();
         card.removeConstraint();
         card.move(goal,()=>{
@@ -114,24 +127,12 @@ export class CardControl extends Component {
             // determine if success;
             if (this.Cards.length == this.MergedCards.length) this.finish(true);
             // determine if failed;
-            else if (this.WaitingCards.length >= 7) this.finish(false);
-        })
-    }
-
-    before() {
-        // 从数据库获取.
-        if (typeof wx != "undefined") wx.shareAppMessage({
-            title: "谁是卷王",
-            imageUrl: 'https://mujiang-1253455114.cos.ap-shanghai.myqcloud.com/juan/assets/assets/head.png', //显示图片长宽比是 5:4
-            // imageUrlId: 1,审核通过的图片 ID，详见 使用审核通过的转发图片
-            query: "test=genzong",
-            toCurrentGroup: false
+            else if (this.WaitingCards.length >= MAX_QUEUE) this.finish(false);
         })
     }
 
     onUndo() {
         if (this.node.active == false) return currentActive.onUndo();
-        this.before()
 
         let pos = this.findWaitingPos(this.lastAct);
         if (pos == -1) {
@@ -143,19 +144,24 @@ export class CardControl extends Component {
         this.extraCards(pos, 1);
     }
 
-    onExtraCards() {
+    onExtraCards(callback=()=>{}) {
         if (this.node.active == false) return currentActive.onExtraCards();
-        this.before()
 
-        let cards = this.extraCards(0, 3);
+        let cards = this.extraCards(0, MAX_QUEUE);
         for (let i = 0; i < cards.length; i++) {
             cards[i].extra();
         }
+        callback();
     }
 
-    onRandom() {
+    onRevive() {
+        if (this.node.active == false) return currentActive.onRevive();
+        ;
+        this.onRandom(()=>{this.onExtraCards()});
+    }
+
+    onRandom(callback=()=>{}) {
         if (this.node.active == false) return currentActive.onRandom();
-        this.before()
 
         let cache:[{}] = [];
         this.Cards.forEach((card)=> {
@@ -173,6 +179,7 @@ export class CardControl extends Component {
                     card.fly(card.lastPos);
                 }
             })
+            callback();
         }, 0.6)
 
     }
@@ -229,12 +236,19 @@ export class CardControl extends Component {
 
     merge() {
         if (!this.MergingCards.length) return;
-
         for (let i = 0; this.MergingCards.length && i < 3; i++) {
             let card = this.MergingCards.shift();
             this.MergedCards.push(card)
-            card.node.destroy()
+            tween<Node>().target(card.node)
+                .to(0.2, {
+                    scale: new Vec3(0, 0 ,0)
+                })
+                .call(()=>{
+                    card.node.destroy()
+                })
+                .start()
         }
+        this.onMerge();
         this.refreshQueue();
     }
 
@@ -247,7 +261,7 @@ export class CardControl extends Component {
     }
 
     // 找到一个插入的位置
-    makePlace(card:CardTemplate): Vec3 {
+    makePlace(card:CardTemplate): Node {
         let found = -1;
         for (let i = this.WaitingCards.length-1; i>=0; i--) {
             if (this.WaitingCards[i].type == card.type) {
@@ -266,11 +280,15 @@ export class CardControl extends Component {
             this.WaitingCards.splice(found+1, 0, card);
             this.refreshQueue(found+2);
         }
-        return place.worldPosition;
+        return place;
     }
 
     private random(list) {
         return list[Math.floor(Math.random()*list.length)];
+    }
+
+    private onMerge() {
+        this.playAudio("merge");
     }
 
     private onSameCard() {
@@ -304,6 +322,51 @@ export class CardControl extends Component {
     update(deltaTime: number) {
         
     }
+
+    share(ev, msg){
+        WXAPI.share(msg, ()=>{});
+    }
+
+    getTool(ev, msg) {
+        if (msg == 'undo' && this.been_undo) return false;
+        if (msg == 'extra' && this.been_extra) return false;
+        if (msg == 'shuffle' && this.been_shuffle) return false;
+        if (msg == 'revive' && this.been_revive) return false;
+        // if share
+        WXAPI.share(msg, ()=>{
+            let node:Node = null;
+            this.scheduleOnce(()=>{
+                switch (msg) {
+                    case 'undo':
+                        this.onUndo()
+                        this.been_undo = true;
+                        node = find('Canvas/Bottom/Layout/GameFeature/Undo Button')
+                        break;
+                    case "extra":
+                        this.onExtraCards()
+                        this.been_extra = true;
+                        node = find('Canvas/Bottom/Layout/GameFeature/Extra Button')
+                        break;
+                    case "shuffle":
+                        this.onRandom()
+                        this.been_shuffle = true;
+                        node = find('Canvas/Bottom/Layout/GameFeature/Shuffle Button')
+                        break;
+                    case "revive":
+                        this.onRevive()
+                        this.been_revive = true;
+                        break;
+                }
+                if (node) {
+                    let btn = node.getComponent(Button);
+                    let img = node.getComponent(Sprite);
+                    btn.interactable = false;
+                    img.color = math.color("#555555");
+                }
+            }, 0.3)
+        });
+    }
+
 }
 
 function shuffle(array) {

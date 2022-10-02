@@ -1,4 +1,6 @@
-import {_decorator, Component, AudioSource, Node, AudioClip, assetManager, find, sys} from 'cc';
+import {_decorator, Component, AudioSource, Node, AudioClip,
+    resources,
+    assetManager, find, sys} from 'cc';
 import {MySwitch} from "db://assets/scripts/MySwitch";
 const { ccclass, property } = _decorator;
 
@@ -51,13 +53,19 @@ export class clickAudio extends Component {
         let swv:Node = find("Setting/background/Vibrate Switch");
         swv.getComponent(MySwitch).setSpriteFrame(vibrateEnabled);
 
-        assetManager.loadRemote(URL_BEEP, (err, audioClip: AudioClip) => {
-            this.source.clip = audioClip;
-        });
+        // assetManager.loadRemote(URL_BEEP, (err, audioClip: AudioClip) => {
+        //     this.source.clip = audioClip;
+        // });
+        resources.load('audio/button', AudioClip, (err, audio)=>{
+            this.source.clip = audio;
+            this.source.loop = false;
+        })
         this.node.on(Node.EventType.TOUCH_START, ()=>{
             if (enabled) {
-                this.source.playOneShot(this.source.clip);
+                // this.source.playOneShot(this.source.clip);
+                this.source.play();
             }
+
             if (vibrateEnabled) {
                 if (typeof wx != "undefined") wx.vibrateShort({
                     type: 'medium'

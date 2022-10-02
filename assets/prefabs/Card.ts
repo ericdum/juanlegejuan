@@ -134,13 +134,13 @@ export class CardTemplate extends Component {
         mask.active = false;
     }
 
-    public move(to:Vec3, callback) {
+    public move(to:Node, callback) {
         this.removeConstraint();
         this.lastPos = this.node.worldPosition.clone();
-        this.fly(to, ()=>{
+        this.fly(to.worldPosition.clone(), ()=>{
             callback.apply(this, arguments);
             this.rect = this.node.getComponent(UITransform).getBoundingBoxToWorld();
-        })
+        }, 0.4, new Vec3(0.8, 0.8, 1))
     }
 
     public undo() {
@@ -150,19 +150,24 @@ export class CardTemplate extends Component {
                 let c:CardTemplate = this.constraints[i];
                 c.addDepend(this)
             }
-        })
+        }, 0.4, new Vec3(1, 1, 1))
     }
 
     public extra() {
         let pos = this.node.worldPosition;
-        this.fly(new Vec3(pos.x, pos.y+500), ()=>{}, 0.2);
+        this.fly(new Vec3(pos.x, pos.y+300), ()=>{}, 0.2, this.node.getScale());
         this.queued = false;
     }
 
-    public fly(to:Vec3, callback=()=>{}, duration=0.4){
+    public fly(to:Vec3, callback=()=>{}, duration=0.4,
+               scale:Vec3=null){
+        let props = {
+            worldPosition: to
+        };
+        if (scale) props.scale = scale;
         tween<Node>()
             .target(this.node)
-            .to(duration, {worldPosition: to})
+            .to(duration, props)
             .call(callback)
             .start()
     }

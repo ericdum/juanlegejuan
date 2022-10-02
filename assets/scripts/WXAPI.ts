@@ -1,46 +1,83 @@
 import {sys} from "cc";
 
-const BASE_URL = "https://juan.zhuzhe.xyz/services/juan";
-
-// let wx = WechatMiniprogram.Wx;
-
 class WXAPI {
+    cloudInited = false
     public constructor() {
+
+    }
+    private async init() {
+        if (typeof wx == 'undefined') return;
+        if ( ! this.cloudInited ) {
+            // this.cloud = new wx.cloud.Cloud({
+            //     resourceAppid: 'wxfdf9176bb84b6c51', // 微信云托管环境所属账号，服务商appid、公众号或小程序appid
+            //     resourceEnv: '8g71dxke43f8814e', // 微信云托管的环境ID
+            // })
+            // this.cloud = wx.cloud
+            await wx.cloud.init() // init过程是异步的，需要等待 init 完成才可以发起调用
+            this.cloudInited = true;
+        }
     }
     public login() {
         if (typeof wx == 'undefined') return;
-        wx.login({
-            success (res) {
-                if (res.code) {
-                    //发起网络请求
-                    wx.request({
-                        url: BASE_URL + '/login',
-                        data: {
-                            code: res.code,
-                            session_id: sys.localStorage.getItem("session_id")
-                        },
-                        success(res) {
-                            console.log(res.data);
-                            let data = res.data || {};
-                            if (data.session_id) sys.localStorage.setItem("session_id", data.session_id);
-                            if (data.open_id) sys.localStorage.setItem("open_id", data.open_id);
-                        },
-                        fail (err) {
-                            console.log('登录失败！', `[${err.errno}]`, err.errMsg )
-                            // TODO: do someting;
+        this.call({
+            method: 'POST',
+            path: "/login"
+        });
+    }
+//https://mujiang-1253455114.cos.ap-shanghai.myqcloud.com/juan
+    public share(msg, callback=()=>{}) {
+        if (typeof wx == 'undefined') return;
 
-                        }
-                    })
-                } else {
-                    console.log('登录失败！' + res.errMsg)
-                }
-            }, fail (err) {
-                console.log('登录失败！', `[${err.errno}]`, err.errMsg)
-                // TODO: do someting;
-            }
+        this.call({
+            path: "/share",
+            data: {from: msg}
+        }).then((data)=>{
+            // console.log(data);
+            wx.shareAppMessage(data);
+            callback();
         })
+        // 从数据库获取.
     }
 
+    public video() {
+        let ad = wx.createRewardedVideoAd();
+    }
+
+    private async call (obj: object, number=0)  {
+        if (typeof wx == 'undefined') return;
+        await this.init();
+        const that = this;
+        try{
+            const result = await wx.cloud.callContainer({
+                path: obj.path, // 填入业务自定义路径和参数，根目录，就是 /
+                method: obj.method||'GET', // 按照自己的业务开发，选择对应的方法
+                data: obj.data,
+                // dataType:'text', // 如果返回的不是 json 格式，需要添加此项
+                config: {
+                    env: "prod-8g71dxke43f8814e"
+                },
+                header: {
+                    'X-WX-SERVICE': 'koa-t760', // xxx中填入服务名称（微信云托管 - 服务管理 - 服务列表 - 服务名称）
+                    // 其他 header 参数
+                }
+                // 其余参数同 wx.request
+            })
+            // console.log(`微信云托管调用结果${result.errMsg} | callid:${result.callID}`)
+            return result.data // 业务数据在 data 中
+        } catch(e){
+            const error = e.toString()
+            // 如果错误信息为未初始化，则等待300ms再次尝试，因为 init 过程是异步的
+            if(error.indexOf("Cloud API isn't enabled")!=-1 && number<3){
+                return new Promise((resolve)=>{
+                    setTimeout(function(){
+                        resolve(that.call(obj,number+1))
+                    },300)
+                })
+            } else {
+                throw new Error(`调用失败${error}`)
+            }
+        }
+    }
 }
 
 export default new WXAPI();
