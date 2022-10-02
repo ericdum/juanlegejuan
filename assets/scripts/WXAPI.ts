@@ -43,7 +43,7 @@ class WXAPI {
         let ad = wx.createRewardedVideoAd();
     }
 
-    private async call (obj: object, number=0)  {
+    public async call (obj: object, number=0)  {
         if (typeof wx == 'undefined') return;
         await this.init();
         const that = this;
@@ -65,6 +65,7 @@ class WXAPI {
             // console.log(`微信云托管调用结果${result.errMsg} | callid:${result.callID}`)
             return result.data // 业务数据在 data 中
         } catch(e){
+            console.error("call service error:", e)
             const error = e.toString()
             // 如果错误信息为未初始化，则等待300ms再次尝试，因为 init 过程是异步的
             if(error.indexOf("Cloud API isn't enabled")!=-1 && number<3){
