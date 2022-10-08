@@ -112,6 +112,9 @@ export class GameControl extends Component {
         resources.load("audio/trans", AudioClip, (err, audio)=>{
             this.audio.playOneShot(audio);
         })
+        if (typeof wx != "undefined") {
+            wx.reportEvent("user_start_game", {})
+        }
     }
 
     backToHome() {
