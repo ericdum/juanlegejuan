@@ -45,6 +45,7 @@ export class BGMControl extends Component {
             sw.getComponent(MySwitch).setSpriteFrame(true);
             resources.load(this.url, AudioClip, (err, audio)=>{
                 this.source.clip = audio;
+                this.source.loop = true;
                 this.source.play();
             })
         } else {

@@ -23,6 +23,12 @@ class WXAPI {
             method: 'POST',
             path: "/login"
         });
+        let aidMatch = location.href.match(/aid=([^&]+)/)
+        let aid = "";
+        if (aid) aid = aid[1]
+        wx.reportEvent("user", {
+            aid
+        })
     }
 //https://mujiang-1253455114.cos.ap-shanghai.myqcloud.com/juan
     public share(msg, callback=()=>{}) {
@@ -34,6 +40,9 @@ class WXAPI {
         }).then((data)=>{
             // console.log(data);
             wx.shareAppMessage(data);
+            wx.reportEvent("user_share", {
+                "share_message": data.title
+            })
             callback();
         })
         // 从数据库获取.

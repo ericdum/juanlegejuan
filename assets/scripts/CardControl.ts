@@ -45,6 +45,8 @@ export class CardControl extends Component {
     protected stageNum = 2;
     protected currentStage = 1;
     protected stages = {}
+    private _id = "";
+    private startTime = 0;
 
     protected onLoad() {
         console.log("PlayGround onLoad")
@@ -69,7 +71,9 @@ export class CardControl extends Component {
     protected loadGame(game:object) {
         let {types, level, url, layers, width, height} = game;
         let total = 0;
-        let images = {}
+        let images = {};
+        this._id = game._id;
+        this.startTime = Date.now();
 
         layers.forEach((layer)=>{
             layer.data.forEach((row)=> {
@@ -172,6 +176,22 @@ export class CardControl extends Component {
     }
 
     finish(success=true) {
+        if (typeof wx != "undefined") {
+            if (success) {
+                wx.reportEvent("user_success", {
+                    "stage_id": this._id,
+                    "is_last": this.stageNum != this.currentStage ? 0 : 1,
+                    "stage": this.currentStage,
+                    time: Math.floor((Date.now() - this.startTime)/1000)
+                })
+            } else {
+                wx.reportEvent("user_fail", {
+                    "stage_id": this._id,
+                    "stage": this.currentStage,
+                    time: Math.floor((Date.now() - this.startTime)/1000)
+                })
+            }
+        }
         if (this.stageNum != this.currentStage && success) {
             this.currentStage++;
             this.clean();
@@ -453,6 +473,11 @@ export class CardControl extends Component {
                     let img = node.getComponent(Sprite);
                     btn.interactable = false;
                     img.color = math.color("#555555");
+                }
+                if (typeof wx != "undefined") {
+                    wx.reportEvent("user_use_tool", {
+                        tool: msg
+                    })
                 }
             }, 0.3)
         });
