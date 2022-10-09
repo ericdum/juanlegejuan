@@ -2,8 +2,28 @@ import {sys} from "cc";
 
 class WXAPI {
     cloudInited = false
+    shareOption:{title?, imageUrl?} = {}
     public constructor() {
-
+        if (typeof wx == 'undefined') return;
+        this.init()
+        this.refresh();
+        wx.onShareTimeline(() => {
+            this.refresh();
+            console.log(this.shareOption)
+            return this.shareOption
+        })
+        wx.onShareAppMessage(() => {
+            this.refresh();
+            console.log(this.shareOption)
+            return this.shareOption
+        })
+    }
+    private refresh() {
+        this.call({
+            path: "/share"
+        }).then((data)=>{
+            this.shareOption = data;
+        })
     }
     private async init() {
         if (typeof wx == 'undefined') return;
@@ -23,33 +43,92 @@ class WXAPI {
             method: 'POST',
             path: "/login"
         });
-        let aidMatch = location.href.match(/aid=([^&]+)/)
-        let aid = "";
-        if (aid) aid = aid[1]
+        console.log("query", wx.getLaunchOptionsSync().query)
         wx.reportEvent("user", {
-            aid
+            aid: wx.getLaunchOptionsSync().query.aid
         })
+
     }
 //https://mujiang-1253455114.cos.ap-shanghai.myqcloud.com/juan
     public share(msg, callback=()=>{}) {
-        if (typeof wx == 'undefined') return;
+        if (typeof wx == 'undefined') return callback();
 
-        this.call({
-            path: "/share",
-            data: {from: msg}
-        }).then((data)=>{
-            // console.log(data);
-            wx.shareAppMessage(data);
-            wx.reportEvent("user_share", {
-                "share_message": data.title
-            })
-            callback();
+        wx.shareAppMessage(this.shareOption);
+        wx.reportEvent("user_share", {
+            "share_message": this.shareOption.title
         })
-        // 从数据库获取.
+        setTimeout(callback, 0.5)
+        this.refresh()
     }
 
-    public video() {
-        let ad = wx.createRewardedVideoAd();
+    public alert(message) {
+        if (typeof wx == 'undefined') return alert(message);
+
+        wx.showToast({
+            title: message,
+            icon: 'none',
+            duration: 1500
+        })
+    }
+
+    public loading() {
+        if (typeof wx == 'undefined') return ;
+        wx.showToast({
+            title: '加载中...',
+            icon: 'loading',
+            duration: 1500
+        })
+    }
+
+    public modal(title, content, resolve, reject) {
+        if (typeof wx == 'undefined') return alert(title+"\r\n"+content);
+        wx.showModal({
+            title: title,
+            content: content,
+            success:function(res){
+                if(res.confirm){
+                    resolve()
+                }else{
+                    reject()
+                }
+            }
+        })
+    }
+
+    public video(resolve, reject) {
+        if (typeof wx == 'undefined') return resolve();
+        let videoAd = wx.createRewardedVideoAd({
+            adUnitId: 'adunit-326846acd405d932'
+        })
+        videoAd.offError();
+        videoAd.offClose();
+
+        videoAd.onClose(res => {
+            // 用户点击了【关闭广告】按钮
+            // 小于 2.1.0 的基础库版本，res 是一个 undefined
+            if (res && res.isEnded || res === undefined) {
+                resolve()
+            }
+            else {
+                reject()
+            }
+        })
+
+        videoAd.onError(err => {
+            console.error(err)
+            resolve()
+        })
+
+        // 用户触发广告后，显示激励视频广告
+        videoAd.show().catch(() => {
+            // 失败重试
+            videoAd.load()
+                .then(() => videoAd.show())
+                .catch(err => {
+                    reject();
+                    console.log('激励视频 广告显示失败')
+                })
+        })
     }
 
     public async call (obj: object, number=0)  {
@@ -87,6 +166,11 @@ class WXAPI {
                 throw new Error(`调用失败${error}`)
             }
         }
+    }
+
+    public event(id, data){
+        if (typeof wx != "undefined") return ;
+        wx.reportEvent(id, data)
     }
 }
 

@@ -27,10 +27,10 @@ export class CardControl extends Component {
     @property({type:Prefab})
     private cardPrefab: Prefab = null;
 
-    protected Cards:[CardTemplate] = [];
-    protected MergedCards:[CardTemplate] = [];
-    protected MergingCards:[CardTemplate] = [];
-    protected WaitingCards:[CardTemplate] = [];
+    protected Cards:CardTemplate[] = [];
+    protected MergedCards:CardTemplate[] = [];
+    protected MergingCards:CardTemplate[] = [];
+    protected WaitingCards:CardTemplate[] = [];
     protected Container:Node;
 
     private audio:AudioSource = new AudioSource();
@@ -45,7 +45,7 @@ export class CardControl extends Component {
     protected stageNum = 2;
     protected currentStage = 1;
     protected stages = {}
-    private _id = "";
+    protected gid = "";
     private startTime = 0;
 
     protected onLoad() {
@@ -68,11 +68,11 @@ export class CardControl extends Component {
         this.WaitingCards.splice(0);
     }
 
-    protected loadGame(game:object) {
+    protected loadGame(game) {
         let {types, level, url, layers, width, height} = game;
         let total = 0;
         let images = {};
-        this._id = game._id;
+        this.gid = game._id;
         this.startTime = Date.now();
 
         layers.forEach((layer)=>{
@@ -176,21 +176,19 @@ export class CardControl extends Component {
     }
 
     finish(success=true) {
-        if (typeof wx != "undefined") {
-            if (success) {
-                wx.reportEvent("user_success", {
-                    "stage_id": this._id,
-                    "is_last": this.stageNum != this.currentStage ? 0 : 1,
-                    "stage": this.currentStage,
-                    time: Math.floor((Date.now() - this.startTime)/1000)
-                })
-            } else {
-                wx.reportEvent("user_fail", {
-                    "stage_id": this._id,
-                    "stage": this.currentStage,
-                    time: Math.floor((Date.now() - this.startTime)/1000)
-                })
-            }
+        if (success) {
+            WXAPI.event("user_success", {
+                "stage_id": this.gid,
+                "is_last": this.stageNum != this.currentStage ? 0 : 1,
+                "stage": this.currentStage,
+                time: Math.floor((Date.now() - this.startTime)/1000)
+            })
+        } else {
+            WXAPI.event("user_fail", {
+                "stage_id": this.gid,
+                "stage": this.currentStage,
+                time: Math.floor((Date.now() - this.startTime)/1000)
+            })
         }
         if (this.stageNum != this.currentStage && success) {
             this.currentStage++;
@@ -272,7 +270,7 @@ export class CardControl extends Component {
     onRandom(callback=()=>{}) {
         if (this.node.active == false) return currentActive.onRandom();
 
-        let cache:[{}] = [];
+        let cache:object[] = [];
         this.Cards.forEach((card)=> {
             if ( ! card.queued) {
                 cache.push(card.getData())
@@ -302,7 +300,7 @@ export class CardControl extends Component {
         return -1;
     }
 
-    extraCards(start = 0, num = 3): [CardTemplate] {
+    extraCards(start = 0, num = 3):CardTemplate[] {
         let cards = this.WaitingCards.splice(start, num);
         this.refreshQueue();
         return cards;
@@ -444,43 +442,57 @@ export class CardControl extends Component {
         if (msg == 'shuffle' && this.been_shuffle) return false;
         if (msg == 'revive' && this.been_revive) return false;
         // if share
-        WXAPI.share(msg, ()=>{
-            let node:Node = null;
-            this.scheduleOnce(()=>{
-                switch (msg) {
-                    case 'undo':
-                        this.onUndo()
-                        this.been_undo = true;
-                        node = find('Canvas/Bottom/Layout/GameFeature/Undo Button')
-                        break;
-                    case "extra":
-                        this.onExtraCards()
-                        this.been_extra = true;
-                        node = find('Canvas/Bottom/Layout/GameFeature/Extra Button')
-                        break;
-                    case "shuffle":
-                        this.onRandom()
-                        this.been_shuffle = true;
-                        node = find('Canvas/Bottom/Layout/GameFeature/Shuffle Button')
-                        break;
-                    case "revive":
-                        this.onRevive()
-                        this.been_revive = true;
-                        break;
-                }
-                if (node) {
-                    let btn = node.getComponent(Button);
-                    let img = node.getComponent(Sprite);
-                    btn.interactable = false;
-                    img.color = math.color("#555555");
-                }
-                if (typeof wx != "undefined") {
-                    wx.reportEvent("user_use_tool", {
-                        tool: msg
-                    })
-                }
-            }, 0.3)
-        });
+        let node:Node = null;
+        switch (msg) {
+            case 'undo':
+                WXAPI.share(msg, ()=>{
+                    this.onUndo()
+                    this.been_undo = true;
+                    node = find('Canvas/Bottom/Layout/GameFeature/Undo Button')
+                    this.afterTool(node, msg);
+                });
+                break;
+            case "extra":
+                WXAPI.video(()=> {
+                    this.onExtraCards()
+                    this.been_extra = true;
+                    node = find('Canvas/Bottom/Layout/GameFeature/Extra Button')
+                    this.afterTool(node, msg);
+                }, ()=>{
+                    WXAPI.alert("视频播放完成才能获得道具")
+                })
+                break;
+            case "shuffle":
+                WXAPI.share(msg, ()=>{
+                    this.onRandom()
+                    this.been_shuffle = true;
+                    node = find('Canvas/Bottom/Layout/GameFeature/Shuffle Button')
+                    this.afterTool(node, msg);
+                });
+                break;
+            case "revive":
+                WXAPI.video(()=> {
+                    this.onRevive()
+                    this.been_revive = true;
+                    find('Revive').getComponent(PopupControl).close()
+                    this.afterTool(node, msg);
+                }, ()=>{
+                    WXAPI.alert("视频播放完成才能获得道具")
+                })
+                break;
+        }
+    }
+
+    afterTool(node, msg) {
+        if (node) {
+            let btn = node.getComponent(Button);
+            let img = node.getComponent(Sprite);
+            btn.interactable = false;
+            img.color = math.color("#555555");
+        }
+        WXAPI.event("user_use_tool", {
+            tool: msg
+        })
     }
 
     encode(row:string):number {

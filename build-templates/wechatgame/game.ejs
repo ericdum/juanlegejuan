@@ -52,6 +52,10 @@ firstScreen.start('<%= alpha %>', '<%= antialias %>', '<%= useWebgl2 %>').then((
 }).then((application) => {
     return firstScreen.setProgress(0.4).then(() => Promise.resolve(application));
 }).then((application) => {
+    wx.showShareMenu({
+        withShareTicket: true,
+        menus: ['shareAppMessage', 'shareTimeline']
+    })
     return onApplicationCreated(application);
 }).catch((err) => {
     console.error(err);
