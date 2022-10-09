@@ -29,8 +29,8 @@ export class CardTemplate extends Component {
 
     public queued = false;
 
-    public depends:{int:CardTemplate} = {};
-    public constraints:{int:CardTemplate} = {};
+    public depends = {};
+    public constraints = {};
 
     public rect:math.Rect;
     public scale:Vec3;
