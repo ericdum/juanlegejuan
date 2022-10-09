@@ -255,7 +255,7 @@ export class CardControl extends Component {
         if (this.node.active == false) return currentActive.onExtraCards();
 
         // let cards = this.extraCards(0, MAX_QUEUE);
-        let cards = this.extraCards(0, Math.ceil(this.WaitingCards.length));
+        let cards = this.extraCards(0, Math.ceil(this.WaitingCards.length / 2));
         for (let i = 0; i < cards.length; i++) {
             cards[i].extra();
         }

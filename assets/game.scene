@@ -20052,7 +20052,7 @@
     "_contentSize": {
       "__type__": "cc.Size",
       "width": 1021,
-      "height": 1765
+      "height": 1764
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
