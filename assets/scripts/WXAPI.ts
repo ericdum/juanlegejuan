@@ -169,7 +169,7 @@ class WXAPI {
     }
 
     public event(id, data){
-        if (typeof wx != "undefined") return ;
+        if (typeof wx == "undefined") return ;
         wx.reportEvent(id, data)
     }
 }
