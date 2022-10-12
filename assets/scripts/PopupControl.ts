@@ -5,6 +5,7 @@ const { ccclass, property } = _decorator;
 export class PopupControl extends Component {
 
     open() {
+        console.log(this.node)
         this.node.active = true;
     }
     close() {
