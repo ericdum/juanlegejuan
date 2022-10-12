@@ -177,11 +177,21 @@ export class CardControl extends Component {
 
     finish(success=true) {
         if (success) {
+            let time = Math.floor((Date.now() - this.startTime)/1000);
             WXAPI.event("user_success", {
                 "stage_id": this.gid,
                 "is_last": this.stageNum != this.currentStage ? 0 : 1,
                 "stage": this.currentStage,
-                time: Math.floor((Date.now() - this.startTime)/1000)
+                time: time
+            })
+            WXAPI.call({
+                path: '/finish/'+this.gid,
+                method: "POST",
+                data: {
+                    time: time,
+                    "is_last": this.stageNum != this.currentStage ? 0 : 1,
+                    "stage": this.currentStage,
+                }
             })
         } else {
             WXAPI.event("user_fail", {
@@ -453,13 +463,12 @@ export class CardControl extends Component {
                 });
                 break;
             case "extra":
-                WXAPI.video(()=> {
+                let func = ["share", "video"][Math.floor(Math.random()*1.3)];
+                WXAPI[func](msg, ()=> {
                     this.onExtraCards()
                     this.been_extra = true;
                     node = find('Canvas/Bottom/Layout/GameFeature/Extra Button')
                     this.afterTool(node, msg);
-                }, ()=>{
-                    WXAPI.alert("视频播放完成才能获得道具")
                 })
                 break;
             case "shuffle":
@@ -471,13 +480,11 @@ export class CardControl extends Component {
                 });
                 break;
             case "revive":
-                WXAPI.video(()=> {
+                WXAPI.video(msg, ()=> {
                     this.onRevive()
                     this.been_revive = true;
                     find('Revive').getComponent(PopupControl).close()
                     this.afterTool(node, msg);
-                }, ()=>{
-                    WXAPI.alert("视频播放完成才能获得道具")
                 })
                 break;
         }
