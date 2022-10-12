@@ -3,6 +3,11 @@ import {sys} from "cc";
 class WXAPI {
     cloudInited = false
     shareOption:{title?, imageUrl?} = {}
+    env = "prod-8g71dxke43f8814e"
+    service = 'koa-t760'
+    // env = "pre-3g8yq30806c4fdf0"
+    // service = "koa-r6zt"
+
     public constructor() {
         if (typeof wx == 'undefined') return;
         this.init()
@@ -95,8 +100,11 @@ class WXAPI {
         })
     }
 
-    public video(resolve, reject) {
+    public video(msg, resolve) {
         if (typeof wx == 'undefined') return resolve();
+        wx.showLoading({
+            title: '加载中',
+        })
         let videoAd = wx.createRewardedVideoAd({
             adUnitId: 'adunit-326846acd405d932'
         })
@@ -110,7 +118,7 @@ class WXAPI {
                 resolve()
             }
             else {
-                reject()
+                this.alert("视频播放完成才能获得道具")
             }
         })
 
@@ -123,11 +131,17 @@ class WXAPI {
         videoAd.show().catch(() => {
             // 失败重试
             videoAd.load()
-                .then(() => videoAd.show())
+                .then(() => {
+                    wx.hideLoading()
+                    videoAd.show()
+                })
                 .catch(err => {
+                    wx.hideLoading()
                     reject();
                     console.log('激励视频 广告显示失败')
                 })
+        }).then(()=>{
+            wx.hideLoading()
         })
     }
 
@@ -142,10 +156,10 @@ class WXAPI {
                 data: obj.data,
                 // dataType:'text', // 如果返回的不是 json 格式，需要添加此项
                 config: {
-                    env: "prod-8g71dxke43f8814e"
+                    env: this.env
                 },
                 header: {
-                    'X-WX-SERVICE': 'koa-t760', // xxx中填入服务名称（微信云托管 - 服务管理 - 服务列表 - 服务名称）
+                    'X-WX-SERVICE': this.service, // xxx中填入服务名称（微信云托管 - 服务管理 - 服务列表 - 服务名称）
                     // 其他 header 参数
                 }
                 // 其余参数同 wx.request
@@ -172,6 +186,7 @@ class WXAPI {
         if (typeof wx == "undefined") return ;
         wx.reportEvent(id, data)
     }
+
 }
 
 export default new WXAPI();
