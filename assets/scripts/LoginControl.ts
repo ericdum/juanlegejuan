@@ -1,11 +1,10 @@
 import { _decorator, Component, Node } from 'cc';
 const { ccclass, property } = _decorator;
-import WXSdk from "db://assets/scripts/WXSdk";
-let sdk = new WXSdk()
+import WXAPI from "db://assets/scripts/WXAPI";
 @ccclass('LoginControl')
 export class LoginControl extends Component {
     start() {
-        sdk.login()
+        WXAPI.userlogin()
 
     }
 
