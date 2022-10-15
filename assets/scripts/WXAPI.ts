@@ -10,6 +10,14 @@ class WXAPI {
 
     public constructor() {
         if (typeof wx == 'undefined') return;
+        let envdata = this.getEnv()
+
+        if (envdata?.miniProgram?.envVersion === 'develop') {
+            //当前为测试环境，需要去修改env
+            this.env = 'pre-3g8yq30806c4fdf0'
+            this.service = 'koa-r6zt'
+        }
+        console.log("当前环境为：", envdata?.miniProgram?.envVersion, "环境id为：", this.env)
         this.init()
         this.refresh();
         wx.onShareTimeline(() => {
@@ -249,7 +257,9 @@ class WXAPI {
         //存储昵称
         sys.localStorage.setItem("avatarUrl", data?.avatarUrl);
     }
-
+    public getEnv() {
+        return wx.getAccountInfoSync()
+    }
 }
 
 export default new WXAPI();
