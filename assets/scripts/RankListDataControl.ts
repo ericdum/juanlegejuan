@@ -1,6 +1,6 @@
 import { _decorator, Component, Node, Prefab, instantiate, find, Label } from 'cc';
 const { ccclass, property } = _decorator;
-
+import WXAPI from "db://assets/scripts/WXAPI";
 @ccclass('RankListDataControl')
 export class RankListDataControl extends Component {
     //定义四个预设体
@@ -16,11 +16,15 @@ export class RankListDataControl extends Component {
     //其他明次预设体
     @property({ type: Prefab })
     private Otherman: Prefab = null;
-    start() {
+    async start() {
+        let res = await this.getRankData()
         let dataArr = []
-        for (let i = 0; i < 30; i++) {
-            dataArr.push({ nickname: "开岸", minutes: "12", seconds: "45" })
+        for (let i = 0; i < res.length; i++) {
+            dataArr.push({ nickname: res[i].name, minutes: Math.trunc(res[i].time / 60), seconds: res[i].time % 60 })
         }
+        /*for (let i = 0; i < 30; i++) {
+            dataArr.push({ nickname: "开岸", minutes: "12", seconds: "45" })
+        }*/
         for (let i = 0; i < dataArr.length; i++) {
             let man = null
             if (i == 0) {
@@ -78,6 +82,12 @@ export class RankListDataControl extends Component {
         minLabel.string = data.minutes
         let secLabel = timer.getChildByName('seconds').getComponents(Label)[0]
         secLabel.string = data.seconds
+    }
+    //查询排行榜数据
+    async getRankData() {
+        let rankRes = await WXAPI.call({ path: "/leaderboard" })
+        console.log(rankRes)
+        return rankRes
     }
 }
 
