@@ -26,7 +26,6 @@ export class RankListDataControl extends Component {
         for (let i = 0; i < dataArr.length; i++) {
             let man = null
             man = instantiate(this.row)
-            console.log(man, i, dataArr[i])
             this.setOtherManLebal(man, i, dataArr[i])
             parent.addChild(man)
         }
