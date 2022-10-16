@@ -507,7 +507,7 @@ export class CardControl extends Component {
         return row
             .split('')
             .reverse()
-            .map((v) => { return v * 1 })
+            .map((v:any) => { return v * 1 })
             .reduce((sum, bit, i) => {
                 return sum + bit * Math.pow(2, i)
             })
