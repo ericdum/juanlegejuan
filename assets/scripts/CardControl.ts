@@ -50,7 +50,7 @@ export class CardControl extends Component {
 
     protected onLoad() {
         console.log("PlayGround onLoad")
-        this.Container = find('Canvas/Bottom/Layout/Queue/container');
+        this.Container = find('Canvas/Bottom/Layout/Queue/container/view/content');
         this.clean();
 
         WXAPI.call({ path: "/config" }).then((config) => {
