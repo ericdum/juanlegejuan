@@ -8,7 +8,7 @@ export class RankListDataControl extends Component {
     private backgrounds: SpriteFrame[] = [];
     @property({ type: SpriteFrame })
     private defaultBackground: SpriteFrame = null;
-    @property({ type: Prefab})
+    @property({ type: Prefab })
     private row: Prefab = null;
 
     async start() {
@@ -17,7 +17,7 @@ export class RankListDataControl extends Component {
         let dataArr = []
 
         for (let i = 0; i < res.length; i++) {
-            dataArr.push({ nickname: res[i].name, minutes: Math.trunc(res[i].time / 60), seconds: res[i].time % 60 })
+            dataArr.push({ nickname: (res[i].name || res[i]?._id).substring(0, 8), minutes: Math.trunc(res[i].time / 60), seconds: res[i].time % 60 })
         }
         // for (let i = 0; i < 30; i++) {
         //     dataArr.push({ nickname: "开岸", minutes: "12", seconds: "45" })

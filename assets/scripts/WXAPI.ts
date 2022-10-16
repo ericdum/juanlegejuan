@@ -1,4 +1,4 @@
-import {sys, find, UITransform, Vec3, Node} from "cc";
+import { sys, find, UITransform, Vec3, Node } from "cc";
 declare var wx: any;
 
 class WXAPI {
@@ -144,7 +144,7 @@ class WXAPI {
         })
     }
 
-    public video(msg, resolve, reject=()=>{}) {
+    public video(msg, resolve, reject = () => { }) {
         if (typeof wx == 'undefined') return resolve();
         wx.showLoading({
             title: '加载中',
@@ -247,9 +247,9 @@ class WXAPI {
                     });
                 }
                 else {
-                    let uit:UITransform = node.getComponent(UITransform)
-                    let pos:Vec3 = node.getWorldPosition()
-                    let canvas:UITransform = find('Canvas').getComponent(UITransform)
+                    let uit: UITransform = node.getComponent(UITransform)
+                    let pos: Vec3 = node.getWorldPosition()
+                    let canvas: UITransform = find('Canvas').getComponent(UITransform)
                     let dx = sysInfo.screenWidth / canvas.width;
                     let dy = sysInfo.screenHeight / canvas.height;
 
@@ -259,10 +259,10 @@ class WXAPI {
                         type: 'text',
                         text: '',//不显示文字
                         style: {
-                            left: (pos.x - uit.width/2)*dx,
-                            top: (canvas.height-pos.y-uit.height/2)*dy,
-                            width: uit.width*dx,
-                            height: uit.height*dy,
+                            left: (pos.x - uit.width / 2) * dx,
+                            top: (canvas.height - pos.y - uit.height / 2) * dy,
+                            width: uit.width * dx,
+                            height: uit.height * dy,
                             // lineHeight: 40,
                             // backgroundColor: '#111111',//设置按钮透明
                             backgroundColor: '#00000000',//设置按钮透明
@@ -294,6 +294,38 @@ class WXAPI {
             }
         });
     }
+    public EntreGameCroup(node) {
+        console.log("entre")
+        let sysInfo = wx.getSystemInfoSync();
+        let uit: UITransform = node.getComponent(UITransform)
+        let pos: Vec3 = node.getWorldPosition()
+        let canvas: UITransform = find('Canvas').getComponent(UITransform)
+        let dx = sysInfo.screenWidth / canvas.width;
+        let dy = sysInfo.screenHeight / canvas.height;
+        console.log(sysInfo.screenHeight, sysInfo.screenWidth)
+        console.log("dx:", dx, "dy:", dy)
+        let button = wx.createGameClubButton({
+            type: "text",
+            text: "",
+            style: {
+                left: (pos.x - uit.width / 2) * dx,
+                top: (canvas.height - pos.y - uit.height / 2) * dy,
+                width: uit.width * dx,
+                height: uit.height * dy,
+                backgroundColor: '#00000000',//设置按钮透明
+                color: '#00000000',
+            }
+        })
+        console.log("button", button)
+        button.onTap(
+            (res) => {
+                console.log('进入游戏圈')
+                button.destroy();//此时删除按钮
+            }
+        );
+        return button
+    }
+
     public updateUserInfo(data) {
         //存储头像地址
         sys.localStorage.setItem("nickName", data?.nickName);
