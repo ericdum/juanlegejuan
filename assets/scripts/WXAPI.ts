@@ -320,7 +320,7 @@ class WXAPI {
         button.onTap(
             (res) => {
                 console.log('进入游戏圈')
-                button.destroy();//此时删除按钮
+                // button.destroy();//此时删除按钮
             }
         );
         return button
