@@ -1,21 +1,16 @@
-import { _decorator, Component, Node, Prefab, instantiate, find, Label } from 'cc';
+import { _decorator, Component, Prefab, Sprite, SpriteFrame, instantiate, find, Label } from 'cc';
 const { ccclass, property } = _decorator;
 import WXAPI from "db://assets/scripts/WXAPI";
+
 @ccclass('RankListDataControl')
 export class RankListDataControl extends Component {
-    //定义四个预设体
-    //第一名预设体
-    @property({ type: Prefab })
-    private firstman: Prefab = null;
-    //第二名预设体
-    @property({ type: Prefab })
-    private secondman: Prefab = null;
-    //第三名预设体
-    @property({ type: Prefab })
-    private thirdman: Prefab = null;
-    //其他明次预设体
-    @property({ type: Prefab })
-    private Otherman: Prefab = null;
+    @property({ type: SpriteFrame })
+    private backgrounds: SpriteFrame[] = [];
+    @property({ type: SpriteFrame })
+    private defaultBackground: SpriteFrame = null;
+    @property({ type: Prefab})
+    private row: Prefab = null;
+
     async start() {
         let res = await this.getRankData()
         let parent = find("RankListContainer/RankListContainer/ScrollView/view/content")
@@ -30,7 +25,7 @@ export class RankListDataControl extends Component {
 
         for (let i = 0; i < dataArr.length; i++) {
             let man = null
-            man = instantiate(this.Otherman)
+            man = instantiate(this.row)
             console.log(man, i, dataArr[i])
             this.setOtherManLebal(man, i, dataArr[i])
             parent.addChild(man)
@@ -42,20 +37,24 @@ export class RankListDataControl extends Component {
     }
     setOtherManLebal(node, index, data) {
         let num = node.getChildByName('num')
-        //设置序号
-        if (num) {
-            let numLabel = num.getComponents(Label)[0]
+
+        if (this.backgrounds[index]) {
+            node.getComponent(Sprite).spriteFrame = this.backgrounds[index]
+        } else {
+            node.getComponent(Sprite).spriteFrame = this.defaultBackground
+            let numLabel = num.getComponent(Label)
             numLabel.string = (index + 1)
         }
+
         //设置nickname
         let nickname = find('right/nickname', node)
-        let nicknameLabel = nickname.getComponents(Label)[0]
+        let nicknameLabel = nickname.getComponent(Label)
         nicknameLabel.string = data.nickname || ''
         //设置时和分
-        let minLabel = find('right/time/minutes', node).getComponents(Label)[0]
+        let minLabel = find('right/time/minutes', node).getComponent(Label)
         minLabel.string = data.minutes
 
-        let secLabel = find('right/time/seconds', node).getComponents(Label)[0]
+        let secLabel = find('right/time/seconds', node).getComponent(Label)
         secLabel.string = data.seconds
     }
     //查询排行榜数据
