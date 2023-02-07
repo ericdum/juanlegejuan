@@ -1,7 +1,8 @@
 {
-  "name": "young",
-  "uuid": "80ef68e9-2157-495c-b214-3bd2d1a29093",
+  "name": "juan-le-ge-juan",
   "version": "3.6.0",
+  "author": "木酱 (Eric Mujiang) <formateric@gmail.com>",
+  "license": "Apache 2.0",
   "creator": {
     "version": "3.6.0"
   }
