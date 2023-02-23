@@ -44,21 +44,25 @@
 2. 下载代码 `git clone git@github.com:ericdum/juanlegejuan.git`
 3. 打开微信开发工具，在左边菜单中选择小游戏，然后在右上角点击导入。
 4. 在创建小游戏页面点击使用测试号，或者自行[注册正式账号](https://mp.weixin.qq.com/wxopen/waregister?action=step1)
-5. 记下这个appId，稍后要用。
-6. 下载 Cocos Dashboard https://www.cocos.com/en/creator-download
-7. 登录后点击 Add 选择根目录
-8. 随后列表中选择juanlegejuna后进入项目。
-9. 在“场景编辑器”中首先将视图切换为2D模式。
-10. 左下角“资源管理器”中的game、home是两个最主要的场景，双击这两个场景可以检查具体的页面布局。
-11. 点击右上角“构建发布”，在弹出菜单中选择“发布平台”到“微信小游戏”
-12. 初始场景选择为 home
-13. 取消勾选 first 场景
-14. 勾选MD5缓存、Source Maps、替换插屏、初始场景分包、分离引擎
-15. 然后在 appId 中填写前面在小游戏页面创建的 appID
-16. 点击构建
-17. 切换到“微信开发工具”，选择 build/wechatgame 目录重新导入项目
-18. 即可运行
-19. FYI：如果卡在首页，注意错误提示，可能需要导入 Cocos 的基础库，注意控制台报错的提示。
+![微信截图_20230223193430](https://user-images.githubusercontent.com/690825/220901959-3b68f525-70fc-4273-88c5-bdff610875cc.png)
+6. 记下这个appId，稍后要用。
+7. 下载 Cocos Dashboard https://www.cocos.com/en/creator-download
+8. 登录后点击 Add 选择根目录
+9. 随后列表中选择juanlegejuna后进入项目。
+10. 在“场景编辑器”中首先将视图切换为2D模式。
+![微信截图_20230223194342](https://user-images.githubusercontent.com/690825/220902015-99d06655-9e97-4e8f-9aa8-121e5ed16ef8.png)
+12. 左下角“资源管理器”中的game、home是两个最主要的场景，双击这两个场景可以检查具体的页面布局。
+13. 点击右上角“构建发布”，在弹出菜单中选择“发布平台”到“微信小游戏”
+![微信截图_20230223195226](https://user-images.githubusercontent.com/690825/220902076-3112d7dd-5aec-43f5-8b62-bac0bad8e2c2.png)
+15. 初始场景选择为 home
+16. 取消勾选 first 场景
+17. 勾选MD5缓存、Source Maps、替换插屏、初始场景分包、分离引擎
+![微信截图_20230223195252](https://user-images.githubusercontent.com/690825/220902107-5e54de8e-fdeb-4dcf-9633-c46979fee746.png)
+19. 然后在 appId 中填写前面在小游戏页面创建的 appID
+20. 点击构建
+21. 切换到“微信开发工具”，选择 build/wechatgame 目录重新导入项目
+22. 即可运行
+23. FYI：如果卡在首页，注意错误提示，可能需要导入 Cocos 的基础库，注意控制台报错的提示。
 ![微信截图_20230223200519](https://user-images.githubusercontent.com/690825/220901553-2827ef26-70d6-44c1-8003-af9eb0dc1514.png)
 20. FYI：目前后端代码使用了直接请求微信云服务，这个部分代码尚未开源需要自行替换实现。
 
